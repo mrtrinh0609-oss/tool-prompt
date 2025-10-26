@@ -161,8 +161,8 @@ const App: React.FC = () => {
                     {/* Main Tab Navigation */}
                     <div className="flex rounded-lg overflow-hidden bg-gray-800/50">
                         <TabButton tabName="script" label="1. Kịch bản & API" />
-                        <TabButton tabName="characters" label="2. Nhân vật" disabled={!script} />
-                        <TabButton tabName="json" label="3. Prompt Veo" disabled={!script || !characterAnalysisResult} />
+                        <TabButton tabName="characters" label="2. Nhân vật" />
+                        <TabButton tabName="json" label="3. Prompt Veo" />
                     </div>
 
                     {/* Tab Content Panels */}
