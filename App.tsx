@@ -1,0 +1,281 @@
+import React, { useState } from 'react';
+import { generateScript, generateVeoPrompt, generateCharacterPrompts } from './services/geminiService';
+import Header from './components/Header';
+import OutputCard from './components/OutputCard';
+import SparklesIcon from './components/icons/SparklesIcon';
+import JsonIcon from './components/icons/JsonIcon';
+
+type ActiveTab = 'script' | 'characters' | 'json';
+
+const App: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<ActiveTab>('script');
+    const [topic, setTopic] = useState<string>('');
+    const [wordCount, setWordCount] = useState<string>('');
+    const [genre, setGenre] = useState<string>('');
+    const [language, setLanguage] = useState<'vietnamese' | 'english'>('vietnamese');
+    const [characterStyle, setCharacterStyle] = useState<string>('');
+    const [script, setScript] = useState<string>('');
+    const [veoJson, setVeoJson] = useState<string>('');
+    const [characterAnalysisResult, setCharacterAnalysisResult] = useState<string>('');
+    const [isLoadingScript, setIsLoadingScript] = useState<boolean>(false);
+    const [isLoadingJson, setIsLoadingJson] = useState<boolean>(false);
+    const [isLoadingCharacters, setIsLoadingCharacters] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const genres = [
+        "Hành động", "Khoa học viễn tưởng", "Hoạt hình", "Truyện tranh", "Kinh dị",
+        "Hài hước", "Chính kịch", "Lãng mạn", "Tài liệu", "Bí ẩn", "Kỳ ảo"
+    ];
+
+    const characterStyles = [
+        "Hiện thực (Photorealistic)", "Hoạt hình 3D (3D Animation)", "Anime",
+        "Truyện tranh (Comic Book)", "Nghệ thuật Pixel (Pixel Art)",
+        "Hoạt hình tĩnh vật (Claymation)", "Tối giản (Minimalist)"
+    ];
+    
+    const anyLoading = isLoadingScript || isLoadingJson || isLoadingCharacters;
+
+    const handleGenerateScript = async () => {
+        if (!topic.trim()) {
+            setError(language === 'vietnamese' ? 'Vui lòng nhập chủ đề cho kịch bản.' : 'Please enter a topic for the script.');
+            return;
+        }
+        setError(null);
+        setIsLoadingScript(true);
+        setScript('');
+        setVeoJson('');
+        setCharacterAnalysisResult('');
+        try {
+            const result = await generateScript(topic, wordCount, genre, language);
+            setScript(result);
+            setActiveTab('characters'); // Automatically move to the next step
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.');
+        } finally {
+            setIsLoadingScript(false);
+        }
+    };
+    
+    const handleUseOriginalScript = () => {
+        if (!topic.trim()) {
+             setError(language === 'vietnamese' ? 'Vui lòng nhập hoặc dán kịch bản gốc của bạn vào ô văn bản.' : 'Please enter or paste your original script into the text box.');
+            return;
+        }
+        setError(null);
+        setScript(topic);
+        setVeoJson('');
+        setCharacterAnalysisResult('');
+        // Automatically switch to the next step
+        setActiveTab('characters');
+    };
+
+    const handleGenerateCharacters = async () => {
+        if (!script) {
+            setError(language === 'vietnamese' ? 'Vui lòng tạo hoặc cung cấp kịch bản trước.' : 'Please generate or provide a script first.');
+            return;
+        }
+        setError(null);
+        setIsLoadingCharacters(true);
+        setCharacterAnalysisResult('');
+        try {
+            const result = await generateCharacterPrompts(script, characterStyle, language);
+            setCharacterAnalysisResult(result);
+            setActiveTab('json'); // Automatically move to the next step
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.');
+        } finally {
+            setIsLoadingCharacters(false);
+        }
+    };
+
+    const handleGenerateVeoJson = async () => {
+        if (!script || !characterAnalysisResult) {
+            setError(language === 'vietnamese' ? 'Vui lòng tạo kịch bản và phân tích nhân vật trước.' : 'Please generate a script and analyze characters first.');
+            return;
+        }
+        setError(null);
+        setIsLoadingJson(true);
+        setVeoJson('');
+        try {
+            const result = await generateVeoPrompt(script, characterAnalysisResult, characterStyle, language);
+            setVeoJson(result);
+        } catch (err: unknown) {
+             setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.');
+        } finally {
+            setIsLoadingJson(false);
+        }
+    };
+
+    const TabButton: React.FC<{tabName: ActiveTab; label: string; disabled?: boolean;}> = ({ tabName, label, disabled = false }) => (
+        <button
+          onClick={() => setActiveTab(tabName)}
+          className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-300 ease-in-out border-b-2 ${
+            activeTab === tabName
+              ? 'bg-purple-600/20 text-purple-300 border-purple-500'
+              : `text-gray-400 border-transparent hover:bg-gray-700/50 hover:text-gray-200 ${disabled ? 'opacity-50' : ''}`
+          }`}
+        >
+          {label}
+        </button>
+      );
+
+    return (
+        <div className="min-h-screen flex flex-col">
+            <Header />
+            <main className="flex-grow p-4 sm:p-6 lg:p-8">
+                <div className="max-w-7xl mx-auto flex flex-col gap-4">
+                    
+                    {/* Main Tab Navigation */}
+                    <div className="flex rounded-lg overflow-hidden bg-gray-800/50">
+                        <TabButton tabName="script" label="1. Kịch bản" />
+                        <TabButton tabName="characters" label="2. Nhân vật" disabled={!script} />
+                        <TabButton tabName="json" label="3. Prompt Veo" disabled={!script || !characterAnalysisResult} />
+                    </div>
+
+                    {/* Tab Content Panels */}
+                    <div className="mt-4">
+                        {activeTab === 'script' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Left: Script Controls */}
+                                <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 flex flex-col gap-4">
+                                    <h2 className="text-xl font-semibold text-gray-200">Tạo hoặc Cung cấp Kịch bản</h2>
+                                    <p className="text-gray-400 text-sm">Nhập chủ đề để AI tạo kịch bản, hoặc dán kịch bản có sẵn của bạn vào ô bên dưới.</p>
+                                    <textarea
+                                        value={topic}
+                                        onChange={(e) => setTopic(e.target.value)}
+                                        placeholder="Nhập chủ đề (ví dụ: Một chú mèo khám phá thành phố tương lai) HOẶC dán kịch bản đầy đủ của bạn vào đây..."
+                                        className="w-full p-3 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition h-40 resize-none"
+                                        disabled={anyLoading}
+                                    />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <select
+                                            id="language" value={language} onChange={(e) => setLanguage(e.target.value as 'vietnamese' | 'english')}
+                                            className="w-full p-2 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition text-sm"
+                                            disabled={anyLoading}
+                                        >
+                                            <option value="vietnamese">Ngôn ngữ: Tiếng Việt</option>
+                                            <option value="english">Language: English</option>
+                                        </select>
+                                        <input
+                                            type="number" id="wordCount" value={wordCount}
+                                            onChange={(e) => setWordCount(e.target.value)}
+                                            placeholder="Số lượng từ (tùy chọn)"
+                                            className="w-full p-2 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition text-sm"
+                                            disabled={anyLoading}
+                                        />
+                                        <select
+                                            id="genre" value={genre} onChange={(e) => setGenre(e.target.value)}
+                                            className="w-full p-2 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition text-sm"
+                                            disabled={anyLoading}
+                                        >
+                                            <option value="">Chọn thể loại (tùy chọn)</option>
+                                            {genres.map((g) => <option key={g} value={g}>{g}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                                        <button
+                                            onClick={handleGenerateScript} disabled={anyLoading}
+                                            className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 shadow-lg shadow-purple-900/40 disabled:opacity-50 disabled:cursor-wait disabled:transform-none"
+                                        >
+                                            <SparklesIcon className="w-5 h-5" />
+                                            {isLoadingScript ? 'Đang tạo...' : 'Tạo theo Gợi ý'}
+                                        </button>
+                                        <button
+                                            onClick={handleUseOriginalScript} disabled={anyLoading}
+                                            className="w-full flex items-center justify-center gap-2 bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 shadow-lg shadow-purple-900/40 disabled:opacity-50 disabled:transform-none"
+                                        >
+                                            Sử dụng Kịch bản Gốc
+                                        </button>
+                                    </div>
+                                </div>
+                                {/* Right: Script Result */}
+                                <div className="min-h-[500px]">
+                                     <OutputCard 
+                                        title="Kết quả Kịch bản"
+                                        content={script}
+                                        isLoading={isLoadingScript}
+                                        loadingMessage="Đang tạo kịch bản..."
+                                        placeholder="Kịch bản bạn tạo sẽ xuất hiện ở đây."
+                                        onContentChange={setScript}
+                                      />
+                                </div>
+                            </div>
+                        )}
+                         {activeTab === 'characters' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Left: Character Controls */}
+                                <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 flex flex-col gap-4">
+                                     <h2 className="text-xl font-semibold text-gray-200">Phân tích Nhân vật</h2>
+                                     <p className="text-gray-400 text-sm">Tự động xác định các nhân vật từ kịch bản và tạo prompt chi tiết cho từng người theo phong cách bạn chọn.</p>
+                                     <select
+                                         id="characterStyle" value={characterStyle} onChange={(e) => setCharacterStyle(e.target.value)}
+                                         className="w-full p-2 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition text-sm"
+                                         disabled={!script || anyLoading}
+                                     >
+                                         <option value="">Chọn phong cách nghệ thuật</option>
+                                         {characterStyles.map((s) => <option key={s} value={s}>{s}</option>)}
+                                     </select>
+                                     <button
+                                         onClick={handleGenerateCharacters}
+                                         disabled={!script || anyLoading}
+                                         className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-75 shadow-lg shadow-teal-900/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-2"
+                                     >
+                                         {isLoadingCharacters ? 'Đang phân tích...' : 'Phân tích & Tạo Prompts'}
+                                     </button>
+                                 </div>
+                                {/* Right: Character Result */}
+                                <div className="min-h-[500px]">
+                                    <OutputCard
+                                        title="Kết quả Phân tích Nhân vật"
+                                        content={characterAnalysisResult}
+                                        isLoading={isLoadingCharacters}
+                                        loadingMessage="Đang phân tích nhân vật..."
+                                        placeholder="Kết quả phân tích nhân vật sẽ xuất hiện ở đây sau khi bạn chạy."
+                                        isCharacterJson={true}
+                                        onContentChange={setCharacterAnalysisResult}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'json' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Left: JSON Controls */}
+                                <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 flex flex-col gap-4">
+                                    <h2 className="text-xl font-semibold text-gray-200">Tạo Prompt Veo</h2>
+                                    <p className="text-gray-400 text-sm">Sau khi phân tích nhân vật, hãy chuyển đổi kịch bản của bạn thành prompt JSON. Mô tả nhân vật và phong cách nghệ thuật sẽ được tự động đưa vào từng cảnh để đảm bảo tính nhất quán.</p>
+                                     <button
+                                        onClick={handleGenerateVeoJson}
+                                        disabled={!characterAnalysisResult || anyLoading}
+                                        className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75 shadow-lg shadow-cyan-900/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-2"
+                                    >
+                                        <JsonIcon className="w-5 h-5" />
+                                        {isLoadingJson ? 'Đang tạo...' : 'Tạo Prompt'}
+                                    </button>
+                                </div>
+                                {/* Right: JSON Result */}
+                                <div className="min-h-[500px]">
+                                    <OutputCard
+                                        title="Kết quả Prompt JSON Veo"
+                                        content={veoJson}
+                                        isLoading={isLoadingJson}
+                                        loadingMessage="Đang tạo prompt JSON Veo..."
+                                        placeholder="Prompt JSON Veo bạn tạo sẽ xuất hiện ở đây."
+                                        isVeoJson={true}
+                                        onContentChange={setVeoJson}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                     {error && (
+                        <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg text-sm mt-4">
+                            <strong className="font-semibold">Lỗi:</strong> {error}
+                        </div>
+                    )}
+                </div>
+            </main>
+        </div>
+    );
+};
+
+export default App;
