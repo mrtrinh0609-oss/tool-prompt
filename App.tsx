@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateScript, generateVeoPrompt, generateCharacterPrompts } from './services/geminiService';
 import Header from './components/Header';
 import OutputCard from './components/OutputCard';
 import SparklesIcon from './components/icons/SparklesIcon';
 import JsonIcon from './components/icons/JsonIcon';
+import KeyIcon from './components/icons/KeyIcon';
 
 type ActiveTab = 'script' | 'characters' | 'json';
 
 const App: React.FC = () => {
+    const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('gemini-api-key') || '');
+    const [tempApiKey, setTempApiKey] = useState<string>(apiKey);
+    const [isKeySaved, setIsKeySaved] = useState<boolean>(!!apiKey);
     const [activeTab, setActiveTab] = useState<ActiveTab>('script');
+
     const [topic, setTopic] = useState<string>('');
     const [wordCount, setWordCount] = useState<string>('');
     const [genre, setGenre] = useState<string>('');
@@ -22,6 +27,21 @@ const App: React.FC = () => {
     const [isLoadingCharacters, setIsLoadingCharacters] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
+    useEffect(() => {
+        if (apiKey) {
+            localStorage.setItem('gemini-api-key', apiKey);
+            setIsKeySaved(true);
+        } else {
+            localStorage.removeItem('gemini-api-key');
+            setIsKeySaved(false);
+        }
+    }, [apiKey]);
+    
+    const handleSaveApiKey = () => {
+        setApiKey(tempApiKey);
+        setError(null);
+    };
+
     const genres = [
         "Hành động", "Khoa học viễn tưởng", "Hoạt hình", "Truyện tranh", "Kinh dị",
         "Hài hước", "Chính kịch", "Lãng mạn", "Tài liệu", "Bí ẩn", "Kỳ ảo"
@@ -34,8 +54,17 @@ const App: React.FC = () => {
     ];
     
     const anyLoading = isLoadingScript || isLoadingJson || isLoadingCharacters;
+    
+    const checkApiKey = () => {
+        if (!apiKey) {
+            setError(language === 'vietnamese' ? 'Vui lòng thiết lập API Key của bạn ở đầu trang này trước.' : 'Please set your API Key at the top of this page first.');
+            return false;
+        }
+        return true;
+    }
 
     const handleGenerateScript = async () => {
+        if (!checkApiKey()) return;
         if (!topic.trim()) {
             setError(language === 'vietnamese' ? 'Vui lòng nhập chủ đề cho kịch bản.' : 'Please enter a topic for the script.');
             return;
@@ -46,7 +75,7 @@ const App: React.FC = () => {
         setVeoJson('');
         setCharacterAnalysisResult('');
         try {
-            const result = await generateScript(topic, wordCount, genre, language);
+            const result = await generateScript(topic, wordCount, genre, language, apiKey);
             setScript(result);
             setActiveTab('characters'); // Automatically move to the next step
         } catch (err: unknown) {
@@ -57,6 +86,7 @@ const App: React.FC = () => {
     };
     
     const handleUseOriginalScript = () => {
+        if (!checkApiKey()) return;
         if (!topic.trim()) {
              setError(language === 'vietnamese' ? 'Vui lòng nhập hoặc dán kịch bản gốc của bạn vào ô văn bản.' : 'Please enter or paste your original script into the text box.');
             return;
@@ -70,6 +100,7 @@ const App: React.FC = () => {
     };
 
     const handleGenerateCharacters = async () => {
+        if (!checkApiKey()) return;
         if (!script) {
             setError(language === 'vietnamese' ? 'Vui lòng tạo hoặc cung cấp kịch bản trước.' : 'Please generate or provide a script first.');
             return;
@@ -78,7 +109,7 @@ const App: React.FC = () => {
         setIsLoadingCharacters(true);
         setCharacterAnalysisResult('');
         try {
-            const result = await generateCharacterPrompts(script, characterStyle, language);
+            const result = await generateCharacterPrompts(script, characterStyle, language, apiKey);
             setCharacterAnalysisResult(result);
             setActiveTab('json'); // Automatically move to the next step
         } catch (err: unknown) {
@@ -89,6 +120,7 @@ const App: React.FC = () => {
     };
 
     const handleGenerateVeoJson = async () => {
+        if (!checkApiKey()) return;
         if (!script || !characterAnalysisResult) {
             setError(language === 'vietnamese' ? 'Vui lòng tạo kịch bản và phân tích nhân vật trước.' : 'Please generate a script and analyze characters first.');
             return;
@@ -97,7 +129,7 @@ const App: React.FC = () => {
         setIsLoadingJson(true);
         setVeoJson('');
         try {
-            const result = await generateVeoPrompt(script, characterAnalysisResult, characterStyle, language);
+            const result = await generateVeoPrompt(script, characterAnalysisResult, characterStyle, language, apiKey);
             setVeoJson(result);
         } catch (err: unknown) {
              setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.');
@@ -108,12 +140,13 @@ const App: React.FC = () => {
 
     const TabButton: React.FC<{tabName: ActiveTab; label: string; disabled?: boolean;}> = ({ tabName, label, disabled = false }) => (
         <button
-          onClick={() => setActiveTab(tabName)}
+          onClick={() => !disabled && setActiveTab(tabName)}
           className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-300 ease-in-out border-b-2 ${
             activeTab === tabName
               ? 'bg-purple-600/20 text-purple-300 border-purple-500'
-              : `text-gray-400 border-transparent hover:bg-gray-700/50 hover:text-gray-200 ${disabled ? 'opacity-50' : ''}`
+              : `text-gray-400 border-transparent hover:bg-gray-700/50 hover:text-gray-200 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
           }`}
+          disabled={disabled}
         >
           {label}
         </button>
@@ -127,7 +160,7 @@ const App: React.FC = () => {
                     
                     {/* Main Tab Navigation */}
                     <div className="flex rounded-lg overflow-hidden bg-gray-800/50">
-                        <TabButton tabName="script" label="1. Kịch bản" />
+                        <TabButton tabName="script" label="1. Kịch bản & API" />
                         <TabButton tabName="characters" label="2. Nhân vật" disabled={!script} />
                         <TabButton tabName="json" label="3. Prompt Veo" disabled={!script || !characterAnalysisResult} />
                     </div>
@@ -138,6 +171,41 @@ const App: React.FC = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 {/* Left: Script Controls */}
                                 <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 flex flex-col gap-4">
+                                    {/* API KEY SECTION */}
+                                    <div className="flex flex-col gap-4 p-4 border border-gray-700 rounded-lg bg-gray-900/30">
+                                         <h2 className="text-xl font-semibold text-gray-200">Thiết lập API Key</h2>
+                                         <p className="text-gray-400 text-sm">
+                                             Vui lòng nhập API Key của bạn từ Google AI Studio để sử dụng ứng dụng. 
+                                             Key của bạn sẽ được lưu trữ an toàn trong bộ nhớ cục bộ của trình duyệt.
+                                         </p>
+                                         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-sm text-teal-400 hover:text-teal-300 underline">
+                                            Nhận API Key của bạn tại đây
+                                         </a>
+                                         <div className="relative">
+                                             <KeyIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                                             <input
+                                                 type="password"
+                                                 value={tempApiKey}
+                                                 onChange={(e) => setTempApiKey(e.target.value)}
+                                                 placeholder="Dán API Key của bạn vào đây"
+                                                 className="w-full p-3 pl-10 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                                             />
+                                         </div>
+                                         <button
+                                             onClick={handleSaveApiKey}
+                                             disabled={!tempApiKey || tempApiKey === apiKey}
+                                             className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                         >
+                                             Lưu Key
+                                         </button>
+                                         {isKeySaved && (
+                                             <p className="text-green-400 text-sm text-center">API Key đã được lưu và đang hoạt động.</p>
+                                         )}
+                                    </div>
+                                    
+                                    <hr className="border-gray-700 my-2"/>
+
+                                    {/* SCRIPT GENERATION SECTION */}
                                     <h2 className="text-xl font-semibold text-gray-200">Tạo hoặc Cung cấp Kịch bản</h2>
                                     <p className="text-gray-400 text-sm">Nhập chủ đề để AI tạo kịch bản, hoặc dán kịch bản có sẵn của bạn vào ô bên dưới.</p>
                                     <textarea
@@ -174,14 +242,14 @@ const App: React.FC = () => {
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                                         <button
-                                            onClick={handleGenerateScript} disabled={anyLoading}
+                                            onClick={handleGenerateScript} disabled={anyLoading || !apiKey}
                                             className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 shadow-lg shadow-purple-900/40 disabled:opacity-50 disabled:cursor-wait disabled:transform-none"
                                         >
                                             <SparklesIcon className="w-5 h-5" />
                                             {isLoadingScript ? 'Đang tạo...' : 'Tạo theo Gợi ý'}
                                         </button>
                                         <button
-                                            onClick={handleUseOriginalScript} disabled={anyLoading}
+                                            onClick={handleUseOriginalScript} disabled={anyLoading || !apiKey}
                                             className="w-full flex items-center justify-center gap-2 bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 shadow-lg shadow-purple-900/40 disabled:opacity-50 disabled:transform-none"
                                         >
                                             Sử dụng Kịch bản Gốc

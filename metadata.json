@@ -1,5 +1,5 @@
 {
-  "name": "Veo Script & Prompt Generator",
+  "name": "Tạo kịch bản - prompt cho Veo",
   "description": "An application to generate video scripts from a topic and then create a structured JSON prompt for the Veo 3.1 video generation model.",
   "requestFramePermissions": []
 }

@@ -1,16 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-    // This will be handled by the environment, but good practice to check.
-    console.warn("API_KEY is not set. The application will not work without it.");
-}
-
-const getAIClient = () => new GoogleGenAI({ apiKey: API_KEY });
-
-export const generateScript = async (topic: string, wordCount: string, genre: string, language: 'vietnamese' | 'english'): Promise<string> => {
-    const ai = getAIClient();
+export const generateScript = async (topic: string, wordCount: string, genre: string, language: 'vietnamese' | 'english', apiKey: string): Promise<string> => {
+    if (!apiKey) {
+        const errorMessage = language === 'vietnamese' ? 'Vui lòng cung cấp API Key.' : 'Please provide an API Key.';
+        throw new Error(errorMessage);
+    }
+    const ai = new GoogleGenAI({ apiKey });
     try {
         let prompt = language === 'vietnamese'
             ? `Tạo một kịch bản video ngắn, tập trung vào hình ảnh dựa trên chủ đề sau: "${topic}".
@@ -53,8 +48,12 @@ Structure the output clearly with scene headings (e.g., SCENE 1, SCENE 2).
     }
 };
 
-export const generateCharacterPrompts = async (script: string, characterStyle: string, language: 'vietnamese' | 'english'): Promise<string> => {
-    const ai = getAIClient();
+export const generateCharacterPrompts = async (script: string, characterStyle: string, language: 'vietnamese' | 'english', apiKey: string): Promise<string> => {
+    if (!apiKey) {
+        const errorMessage = language === 'vietnamese' ? 'Vui lòng cung cấp API Key.' : 'Please provide an API Key.';
+        throw new Error(errorMessage);
+    }
+    const ai = new GoogleGenAI({ apiKey });
     try {
         let prompt = language === 'vietnamese'
             ? `Dựa vào kịch bản video sau đây, hãy xác định tất cả các nhân vật được đề cập.
@@ -122,8 +121,12 @@ ${script}
 };
 
 
-export const generateVeoPrompt = async (script: string, characterPromptsJson: string, characterStyle: string, language: 'vietnamese' | 'english'): Promise<string> => {
-    const ai = getAIClient();
+export const generateVeoPrompt = async (script: string, characterPromptsJson: string, characterStyle: string, language: 'vietnamese' | 'english', apiKey: string): Promise<string> => {
+    if (!apiKey) {
+        const errorMessage = language === 'vietnamese' ? 'Vui lòng cung cấp API Key.' : 'Please provide an API Key.';
+        throw new Error(errorMessage);
+    }
+    const ai = new GoogleGenAI({ apiKey });
     try {
         let characterInjectionPrompt = '';
         if (characterPromptsJson) {
