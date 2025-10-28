@@ -1,7 +1,14 @@
 
+export interface VeoShot {
+  shotNumber: number;
+  duration: 8;
+  prompt: string;
+}
+
+
 export interface VeoScene {
   sceneNumber: number;
-  description: string;
+  shots: VeoShot[];
 }
 
 export interface VeoPrompt {

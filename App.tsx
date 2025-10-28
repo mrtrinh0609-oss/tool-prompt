@@ -1,12 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { generateScript, generateVeoPrompt, generateCharacterPrompts } from './services/geminiService';
+import { generateScript, generateVeoPrompt } from './services/geminiService';
 import Header from './components/Header';
 import OutputCard from './components/OutputCard';
 import SparklesIcon from './components/icons/SparklesIcon';
 import JsonIcon from './components/icons/JsonIcon';
 import KeyIcon from './components/icons/KeyIcon';
 
-type ActiveTab = 'script' | 'characters' | 'json';
+type ActiveTab = 'script' | 'json';
+
+const styleOptions = {
+    vietnamese: [
+        { value: '', label: 'Chọn một phong cách (tùy chọn)' },
+        { value: '3D Animation (Pixar Style)', label: 'Hoạt hình 3D (Phong cách Pixar)' },
+        { value: 'Japanese Anime (Ghibli Style)', label: 'Anime Nhật Bản (Phong cách Ghibli)' },
+        { value: 'Classic Black and White Film', label: 'Phim đen trắng cổ điển' },
+        { value: 'Cyberpunk Sci-Fi', label: 'Phim khoa học viễn tưởng Cyberpunk' },
+        { value: 'Realistic Documentary', label: 'Phim tài liệu thực tế' },
+        { value: 'Stop-motion Claymation', label: 'Hoạt hình đất sét (Stop-motion)' },
+        { value: 'High Fantasy (Lord of the Rings style)', label: 'Fantasy (Chúa tể những chiếc nhẫn)' },
+        { value: 'Film Noir (Crime, mystery)', label: 'Phim Noir (Tội phạm, bí ẩn)' },
+        { value: 'Vaporwave Aesthetic Video', label: 'Video theo phong cách Vaporwave' },
+    ],
+    english: [
+        { value: '', label: 'Select a style (optional)' },
+        { value: '3D Animation (Pixar Style)', label: '3D Animation (Pixar Style)' },
+        { value: 'Japanese Anime (Ghibli Style)', label: 'Japanese Anime (Ghibli Style)' },
+        { value: 'Classic Black and White Film', label: 'Classic Black and White Film' },
+        { value: 'Cyberpunk Sci-Fi', label: 'Cyberpunk Sci-Fi' },
+        { value: 'Realistic Documentary', label: 'Realistic Documentary' },
+        { value: 'Stop-motion Claymation', label: 'Stop-motion Claymation' },
+        { value: 'High Fantasy (Lord of the Rings style)', label: 'High Fantasy (Lord of the Rings style)' },
+        { value: 'Film Noir (Crime, mystery)', label: 'Film Noir (Crime, mystery)' },
+        { value: 'Vaporwave Aesthetic Video', label: 'Vaporwave Aesthetic Video' },
+    ]
+};
+
 
 const App: React.FC = () => {
     const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('gemini-api-key') || '');
@@ -16,15 +44,12 @@ const App: React.FC = () => {
 
     const [topic, setTopic] = useState<string>('');
     const [wordCount, setWordCount] = useState<string>('');
-    const [genre, setGenre] = useState<string>('');
     const [language, setLanguage] = useState<'vietnamese' | 'english'>('vietnamese');
-    const [characterStyle, setCharacterStyle] = useState<string>('');
     const [script, setScript] = useState<string>('');
     const [veoJson, setVeoJson] = useState<string>('');
-    const [characterAnalysisResult, setCharacterAnalysisResult] = useState<string>('');
+    const [characterStyle, setCharacterStyle] = useState<string>('');
     const [isLoadingScript, setIsLoadingScript] = useState<boolean>(false);
     const [isLoadingJson, setIsLoadingJson] = useState<boolean>(false);
-    const [isLoadingCharacters, setIsLoadingCharacters] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -41,19 +66,8 @@ const App: React.FC = () => {
         setApiKey(tempApiKey);
         setError(null);
     };
-
-    const genres = [
-        "Hành động", "Khoa học viễn tưởng", "Hoạt hình", "Truyện tranh", "Kinh dị",
-        "Hài hước", "Chính kịch", "Lãng mạn", "Tài liệu", "Bí ẩn", "Kỳ ảo"
-    ];
-
-    const characterStyles = [
-        "Hiện thực (Photorealistic)", "Hoạt hình 3D (3D Animation)", "Anime",
-        "Truyện tranh (Comic Book)", "Nghệ thuật Pixel (Pixel Art)",
-        "Hoạt hình tĩnh vật (Claymation)", "Tối giản (Minimalist)"
-    ];
     
-    const anyLoading = isLoadingScript || isLoadingJson || isLoadingCharacters;
+    const anyLoading = isLoadingScript || isLoadingJson;
     
     const checkApiKey = () => {
         if (!apiKey) {
@@ -73,11 +87,10 @@ const App: React.FC = () => {
         setIsLoadingScript(true);
         setScript('');
         setVeoJson('');
-        setCharacterAnalysisResult('');
         try {
-            const result = await generateScript(topic, wordCount, genre, language, apiKey);
+            const result = await generateScript(topic, wordCount, language, apiKey);
             setScript(result);
-            setActiveTab('characters'); // Automatically move to the next step
+            setActiveTab('json'); // Automatically move to the next step
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.');
         } finally {
@@ -94,42 +107,21 @@ const App: React.FC = () => {
         setError(null);
         setScript(topic);
         setVeoJson('');
-        setCharacterAnalysisResult('');
         // Automatically switch to the next step
-        setActiveTab('characters');
+        setActiveTab('json');
     };
 
-    const handleGenerateCharacters = async () => {
+    const handleGenerateVeoJson = async () => {
         if (!checkApiKey()) return;
         if (!script) {
             setError(language === 'vietnamese' ? 'Vui lòng tạo hoặc cung cấp kịch bản trước.' : 'Please generate or provide a script first.');
             return;
         }
         setError(null);
-        setIsLoadingCharacters(true);
-        setCharacterAnalysisResult('');
-        try {
-            const result = await generateCharacterPrompts(script, characterStyle, language, apiKey);
-            setCharacterAnalysisResult(result);
-            setActiveTab('json'); // Automatically move to the next step
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.');
-        } finally {
-            setIsLoadingCharacters(false);
-        }
-    };
-
-    const handleGenerateVeoJson = async () => {
-        if (!checkApiKey()) return;
-        if (!script || !characterAnalysisResult) {
-            setError(language === 'vietnamese' ? 'Vui lòng tạo kịch bản và phân tích nhân vật trước.' : 'Please generate a script and analyze characters first.');
-            return;
-        }
-        setError(null);
         setIsLoadingJson(true);
         setVeoJson('');
         try {
-            const result = await generateVeoPrompt(script, characterAnalysisResult, characterStyle, language, apiKey);
+            const result = await generateVeoPrompt(script, characterStyle, language, apiKey);
             setVeoJson(result);
         } catch (err: unknown) {
              setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.');
@@ -161,8 +153,7 @@ const App: React.FC = () => {
                     {/* Main Tab Navigation */}
                     <div className="flex rounded-lg overflow-hidden bg-gray-800/50">
                         <TabButton tabName="script" label="1. Kịch bản & API" />
-                        <TabButton tabName="characters" label="2. Nhân vật" />
-                        <TabButton tabName="json" label="3. Prompt Veo" />
+                        <TabButton tabName="json" label="2. Prompt Veo" />
                     </div>
 
                     {/* Tab Content Panels */}
@@ -231,25 +222,17 @@ const App: React.FC = () => {
                                             className="w-full p-2 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition text-sm"
                                             disabled={anyLoading}
                                         />
-                                        <select
-                                            id="genre" value={genre} onChange={(e) => setGenre(e.target.value)}
-                                            className="w-full p-2 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition text-sm"
-                                            disabled={anyLoading}
-                                        >
-                                            <option value="">Chọn thể loại (tùy chọn)</option>
-                                            {genres.map((g) => <option key={g} value={g}>{g}</option>)}
-                                        </select>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                                         <button
-                                            onClick={handleGenerateScript} disabled={anyLoading || !apiKey}
+                                            onClick={handleGenerateScript} disabled={anyLoading || !apiKey || !topic.trim()}
                                             className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 shadow-lg shadow-purple-900/40 disabled:opacity-50 disabled:cursor-wait disabled:transform-none"
                                         >
                                             <SparklesIcon className="w-5 h-5" />
                                             {isLoadingScript ? 'Đang tạo...' : 'Tạo theo Gợi ý'}
                                         </button>
                                         <button
-                                            onClick={handleUseOriginalScript} disabled={anyLoading || !apiKey}
+                                            onClick={handleUseOriginalScript} disabled={anyLoading || !apiKey || !topic.trim()}
                                             className="w-full flex items-center justify-center gap-2 bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 shadow-lg shadow-purple-900/40 disabled:opacity-50 disabled:transform-none"
                                         >
                                             Sử dụng Kịch bản Gốc
@@ -269,51 +252,35 @@ const App: React.FC = () => {
                                 </div>
                             </div>
                         )}
-                         {activeTab === 'characters' && (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                {/* Left: Character Controls */}
-                                <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 flex flex-col gap-4">
-                                     <h2 className="text-xl font-semibold text-gray-200">Phân tích Nhân vật</h2>
-                                     <p className="text-gray-400 text-sm">Tự động xác định các nhân vật từ kịch bản và tạo prompt chi tiết cho từng người theo phong cách bạn chọn.</p>
-                                     <select
-                                         id="characterStyle" value={characterStyle} onChange={(e) => setCharacterStyle(e.target.value)}
-                                         className="w-full p-2 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition text-sm"
-                                         disabled={!script || anyLoading}
-                                     >
-                                         <option value="">Chọn phong cách nghệ thuật</option>
-                                         {characterStyles.map((s) => <option key={s} value={s}>{s}</option>)}
-                                     </select>
-                                     <button
-                                         onClick={handleGenerateCharacters}
-                                         disabled={!script || anyLoading}
-                                         className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-75 shadow-lg shadow-teal-900/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-2"
-                                     >
-                                         {isLoadingCharacters ? 'Đang phân tích...' : 'Phân tích & Tạo Prompts'}
-                                     </button>
-                                 </div>
-                                {/* Right: Character Result */}
-                                <div className="min-h-[500px]">
-                                    <OutputCard
-                                        title="Kết quả Phân tích Nhân vật"
-                                        content={characterAnalysisResult}
-                                        isLoading={isLoadingCharacters}
-                                        loadingMessage="Đang phân tích nhân vật..."
-                                        placeholder="Kết quả phân tích nhân vật sẽ xuất hiện ở đây sau khi bạn chạy."
-                                        isCharacterJson={true}
-                                        onContentChange={setCharacterAnalysisResult}
-                                    />
-                                </div>
-                            </div>
-                        )}
                         {activeTab === 'json' && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 {/* Left: JSON Controls */}
                                 <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 flex flex-col gap-4">
                                     <h2 className="text-xl font-semibold text-gray-200">Tạo Prompt Veo</h2>
-                                    <p className="text-gray-400 text-sm">Sau khi phân tích nhân vật, hãy chuyển đổi kịch bản của bạn thành prompt JSON. Mô tả nhân vật và phong cách nghệ thuật sẽ được tự động đưa vào từng cảnh để đảm bảo tính nhất quán.</p>
+                                    <p className="text-gray-400 text-sm">Chuyển đổi kịch bản của bạn thành prompt JSON có cấu trúc để Veo sử dụng, được chia thành các phân đoạn 8 giây.</p>
+                                     
+                                     <div>
+                                        <label htmlFor="characterStyle" className="block text-sm font-medium text-gray-300 mb-2">
+                                            Phong cách hình ảnh
+                                        </label>
+                                        <select
+                                            id="characterStyle"
+                                            value={characterStyle}
+                                            onChange={(e) => setCharacterStyle(e.target.value)}
+                                            className="w-full p-3 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                                            disabled={anyLoading}
+                                        >
+                                            {styleOptions[language].map(option => (
+                                                <option key={option.value} value={option.value} disabled={option.value === ''}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
                                      <button
                                         onClick={handleGenerateVeoJson}
-                                        disabled={!characterAnalysisResult || anyLoading}
+                                        disabled={!script || anyLoading}
                                         className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75 shadow-lg shadow-cyan-900/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-2"
                                     >
                                         <JsonIcon className="w-5 h-5" />

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Loader from './Loader';
 import ClipboardIcon from './icons/ClipboardIcon';
 import SaveIcon from './icons/SaveIcon';
-import { VeoScene } from '../types';
+import EditIcon from './icons/EditIcon';
+import JsonIcon from './icons/JsonIcon';
+import { VeoPrompt } from '../types';
 
 interface OutputCardProps {
   title: string;
@@ -11,87 +13,8 @@ interface OutputCardProps {
   loadingMessage: string;
   placeholder: string;
   isVeoJson?: boolean;
-  isCharacterJson?: boolean;
   onContentChange?: (newContent: string) => void;
 }
-
-interface Character {
-    name: string;
-    description: string;
-}
-
-const SceneItem: React.FC<{ scene: VeoScene; onSceneChange: (updatedScene: VeoScene) => void; }> = ({ scene, onSceneChange }) => {
-    const [copyText, setCopyText] = useState('Sao chép Prompt');
-
-    const handleCopyScene = () => {
-        navigator.clipboard.writeText(scene.description);
-        setCopyText('Đã sao chép!');
-        setTimeout(() => setCopyText('Sao chép Prompt'), 2000);
-    };
-
-    const handleChange = (value: string) => {
-        onSceneChange({ ...scene, description: value });
-    };
-
-    return (
-        <div className="p-4">
-            <div className="flex justify-between items-start mb-3">
-                <h4 className="font-semibold text-teal-300 text-lg">Cảnh {scene.sceneNumber}</h4>
-                <button
-                    onClick={handleCopyScene}
-                    className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-colors"
-                    aria-label={`Sao chép prompt cho cảnh ${scene.sceneNumber}`}
-                >
-                    <ClipboardIcon className="w-3 h-3" />
-                    {copyText}
-                </button>
-            </div>
-            <div className="space-y-3 text-sm">
-                 <div>
-                     <label htmlFor={`description-${scene.sceneNumber}`} className="font-semibold text-gray-400 uppercase tracking-wider text-xs">Prompt tổng hợp cho cảnh:</label>
-                    <textarea
-                        id={`description-${scene.sceneNumber}`}
-                        value={scene.description}
-                        onChange={(e) => handleChange(e.target.value)}
-                        className="w-full mt-1 p-2 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition text-sm text-gray-300 h-48 resize-y"
-                     />
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const CharacterItem: React.FC<{ character: Character; onCharacterChange: (updatedCharacter: Character) => void; }> = ({ character, onCharacterChange }) => {
-    const [copyText, setCopyText] = useState('Sao chép Prompt');
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(character.description);
-        setCopyText('Đã sao chép!');
-        setTimeout(() => setCopyText('Sao chép Prompt'), 2000);
-    };
-
-    return (
-        <div className="p-4">
-            <div className="flex justify-between items-start mb-3">
-                <h4 className="font-semibold text-teal-300 text-lg">{character.name}</h4>
-                <button
-                    onClick={handleCopy}
-                    className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-colors"
-                >
-                    <ClipboardIcon className="w-3 h-3" />
-                    {copyText}
-                </button>
-            </div>
-            <textarea
-                value={character.description}
-                onChange={(e) => onCharacterChange({ ...character, description: e.target.value })}
-                className="w-full p-2 bg-gray-900/50 border border-gray-600 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition text-sm text-gray-300 h-28 resize-y"
-                placeholder="Mô tả nhân vật..."
-            />
-        </div>
-    );
-};
-
 
 const OutputCard: React.FC<OutputCardProps> = ({
   title,
@@ -100,24 +23,25 @@ const OutputCard: React.FC<OutputCardProps> = ({
   loadingMessage,
   placeholder,
   isVeoJson = false,
-  isCharacterJson = false,
   onContentChange
 }) => {
-  const [copyText, setCopyText] = useState('Sao chép');
+  const [copyText, setCopyText] = useState('Sao chép tất cả');
   const [saveText, setSaveText] = useState('Lưu thay đổi');
   const [editedContent, setEditedContent] = useState(content);
+  const [isRawView, setIsRawView] = useState(false);
 
   useEffect(() => {
     setEditedContent(content);
+    setIsRawView(false); // Default to structured view on new content
   }, [content]);
   
   const isDirty = editedContent !== content;
 
   const handleCopy = () => {
-    if (editedContent) {
-      navigator.clipboard.writeText(editedContent);
+    if (content) {
+      navigator.clipboard.writeText(content);
       setCopyText('Đã sao chép!');
-      setTimeout(() => setCopyText('Sao chép'), 2000);
+      setTimeout(() => setCopyText('Sao chép tất cả'), 2000);
     }
   };
 
@@ -127,68 +51,116 @@ const OutputCard: React.FC<OutputCardProps> = ({
         setSaveText('Đã lưu!');
         setTimeout(() => setSaveText('Lưu thay đổi'), 2000);
     }
+  };
+  
+  const handleShotCopy = (e: React.MouseEvent<HTMLButtonElement>, prompt: string) => {
+    e.stopPropagation(); // Prevent card from switching to raw view
+    navigator.clipboard.writeText(prompt);
+    
+    const button = e.currentTarget;
+    const textSpan = button.querySelector('span');
+    
+    if (textSpan) {
+        const originalText = textSpan.textContent;
+        textSpan.textContent = 'Đã sao chép!';
+        button.classList.add('text-green-400');
+        button.classList.remove('text-gray-300');
+        
+        setTimeout(() => {
+            if (textSpan) {
+              textSpan.textContent = originalText;
+              button.classList.remove('text-green-400');
+              button.classList.add('text-gray-300');
+            }
+        }, 2000);
+    }
+  };
+
+  let parsedJson: VeoPrompt | null = null;
+  if (isVeoJson && content) {
+      try {
+          const parsed = JSON.parse(content);
+          if (parsed && Array.isArray(parsed.scenes)) {
+            parsedJson = parsed;
+          }
+      } catch (e) {
+        // Not valid JSON, will default to raw textarea view
+      }
   }
+
+  const canBeStructured = parsedJson !== null;
+  const showStructuredView = canBeStructured && !isRawView;
 
   const renderActualContent = () => {
     if (isLoading) return <Loader message={loadingMessage} />;
-    if (!editedContent) return <div className="text-center text-gray-500 p-10">{placeholder}</div>;
-
-    if (isVeoJson) {
-        try {
-            const data: { scenes: VeoScene[] } = JSON.parse(editedContent);
-            const handleSceneUpdate = (index: number, updatedScene: VeoScene) => {
-                const newData = { ...data };
-                newData.scenes[index] = updatedScene;
-                setEditedContent(JSON.stringify(newData, null, 2));
-            }
-            if (data.scenes && Array.isArray(data.scenes)) {
-                return (
-                    <div className="divide-y divide-gray-700">
-                        {data.scenes.map((scene, index) => (
-                            <SceneItem key={scene.sceneNumber} scene={scene} onSceneChange={(updated) => handleSceneUpdate(index, updated)} />
-                        ))}
+    if (!content && !editedContent) return <div className="text-center text-gray-500 p-10">{placeholder}</div>;
+    
+    if (showStructuredView && parsedJson) {
+      return (
+        <div 
+            className="p-4 space-y-6 cursor-pointer hover:bg-gray-800/30 transition-colors"
+            onClick={() => setIsRawView(true)}
+            title="Nhấn để chỉnh sửa JSON"
+        >
+          {parsedJson.scenes.map((scene) => (
+            <div key={scene.sceneNumber} className="space-y-4">
+              <h4 className="text-lg font-semibold text-purple-300 border-b border-gray-700 pb-2">
+                Cảnh {scene.sceneNumber}
+              </h4>
+              <div className="space-y-3 pl-2 sm:pl-4">
+                {scene.shots.map((shot) => (
+                  <div key={shot.shotNumber} className="bg-gray-900/50 p-3 rounded-md border border-gray-700/50 relative group transition-shadow hover:shadow-lg hover:border-gray-600">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-0.5 rounded">
+                        Shot {shot.shotNumber} / {shot.duration}s
+                      </span>
+                      <button
+                        onClick={(e) => handleShotCopy(e, shot.prompt)}
+                        className="absolute top-2 right-2 px-2 py-1 bg-gray-800 rounded-md text-gray-300 text-xs font-semibold flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all hover:bg-gray-600 hover:text-white focus:opacity-100"
+                        aria-label="Sao chép prompt"
+                      >
+                        <ClipboardIcon className="w-3 h-3" />
+                        <span>Sao chép</span>
+                      </button>
                     </div>
-                );
-            }
-        } catch (e) { /* Fallback to textarea if JSON is invalid */ }
+                    <p className="text-gray-300 text-sm leading-relaxed pr-8">{shot.prompt}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
     }
     
-     if (isCharacterJson) {
-        try {
-            const data: { characters: Character[] } = JSON.parse(editedContent);
-             const handleCharacterUpdate = (index: number, updatedCharacter: Character) => {
-                const newData = { ...data };
-                newData.characters[index] = updatedCharacter;
-                setEditedContent(JSON.stringify(newData, null, 2));
-            }
-            if (data.characters && Array.isArray(data.characters)) {
-                return (
-                    <div className="divide-y divide-gray-700">
-                        {data.characters.map((char, index) => (
-                           <CharacterItem key={index} character={char} onCharacterChange={(updated) => handleCharacterUpdate(index, updated)} />
-                        ))}
-                    </div>
-                );
-            }
-        } catch (e) { /* Fallback to textarea if JSON is invalid */ }
-    }
-
     return (
       <textarea
         value={editedContent}
         onChange={(e) => setEditedContent(e.target.value)}
         className="w-full h-full p-4 bg-transparent text-gray-300 text-sm focus:outline-none resize-none"
+        style={{ fontFamily: isVeoJson ? 'monospace' : 'inherit' }}
+        placeholder={placeholder}
       />
     );
   };
   
-  const showFullCopy = isVeoJson || isCharacterJson;
-
+  const showTextarea = !showStructuredView;
+  
   return (
     <div className="bg-gray-800 rounded-lg shadow-2xl h-full flex flex-col">
       <div className="flex items-center justify-between border-b border-gray-700 p-3 flex-wrap gap-2">
         <h3 className="text-md font-semibold text-gray-200">{title}</h3>
         <div className="flex items-center gap-2">
+             {canBeStructured && (
+              <button
+                onClick={() => setIsRawView(!isRawView)}
+                className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-colors"
+                title={isRawView ? "Xem dạng cấu trúc" : "Chỉnh sửa JSON"}
+              >
+                {isRawView ? <JsonIcon className="w-3 h-3" /> : <EditIcon className="w-3 h-3" />}
+                {isRawView ? 'Xem cấu trúc' : 'Chỉnh sửa'}
+              </button>
+            )}
              {isDirty && !isLoading && (
               <button
                 onClick={handleSave}
@@ -198,13 +170,13 @@ const OutputCard: React.FC<OutputCardProps> = ({
                 {saveText}
               </button>
             )}
-            {editedContent && !isLoading && showFullCopy && (
+            {content && !isLoading && (
               <button
                 onClick={handleCopy}
                 className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-colors"
               >
                 <ClipboardIcon className="w-3 h-3" />
-                {copyText} Toàn bộ
+                {copyText}
               </button>
             )}
         </div>
