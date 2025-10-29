@@ -16,10 +16,24 @@ const styleOptions = {
         { value: 'Classic Black and White Film', label: 'Phim đen trắng cổ điển' },
         { value: 'Cyberpunk Sci-Fi', label: 'Phim khoa học viễn tưởng Cyberpunk' },
         { value: 'Realistic Documentary', label: 'Phim tài liệu thực tế' },
+        { value: 'Photorealistic', label: 'Quang học (Photorealistic)' },
+        { value: 'Cinematic Realism', label: 'Hiện thực Điện ảnh (Cinematic Realism)' },
         { value: 'Stop-motion Claymation', label: 'Hoạt hình đất sét (Stop-motion)' },
         { value: 'High Fantasy (Lord of the Rings style)', label: 'Fantasy (Chúa tể những chiếc nhẫn)' },
         { value: 'Film Noir (Crime, mystery)', label: 'Phim Noir (Tội phạm, bí ẩn)' },
         { value: 'Vaporwave Aesthetic Video', label: 'Video theo phong cách Vaporwave' },
+        { value: 'Watercolor Painting', label: 'Tranh màu nước' },
+        { value: '8-bit Pixel Art', label: 'Nghệ thuật Pixel 8-bit' },
+        { value: 'Steampunk', label: 'Steampunk (Cơ khí hơi nước)' },
+        { value: 'Vintage Comic Book Style', label: 'Truyện tranh cổ điển' },
+        { value: 'Surrealism (Dali-esque)', label: 'Chủ nghĩa siêu thực (Phong cách Dali)' },
+        { value: 'Gothic Horror (Tim Burton style)', label: 'Kinh dị Gothic (Phong cách Tim Burton)' },
+        { value: 'Lo-fi / Chillhop Aesthetic', label: 'Thẩm mỹ Lo-fi / Chillhop' },
+        { value: 'Nature Documentary (BBC Planet Earth style)', label: 'Phim tài liệu thiên nhiên (Phong cách BBC)' },
+        { value: 'Wes Anderson Style (Symmetrical, Quirky)', label: 'Phong cách Wes Anderson (Đối xứng, độc đáo)' },
+        { value: 'Psychedelic / Trippy Visuals', label: 'Hình ảnh ảo giác / Psychedelic' },
+        { value: 'Hand-drawn Sketch Animation', label: 'Hoạt hình phác thảo bằng tay' },
+        { value: 'Cinematic Drone Footage', label: 'Cảnh quay điện ảnh bằng Drone' },
     ],
     english: [
         { value: '', label: 'Select a style (optional)' },
@@ -28,10 +42,24 @@ const styleOptions = {
         { value: 'Classic Black and White Film', label: 'Classic Black and White Film' },
         { value: 'Cyberpunk Sci-Fi', label: 'Cyberpunk Sci-Fi' },
         { value: 'Realistic Documentary', label: 'Realistic Documentary' },
+        { value: 'Photorealistic', label: 'Photorealistic' },
+        { value: 'Cinematic Realism', label: 'Cinematic Realism' },
         { value: 'Stop-motion Claymation', label: 'Stop-motion Claymation' },
         { value: 'High Fantasy (Lord of the Rings style)', label: 'High Fantasy (Lord of the Rings style)' },
         { value: 'Film Noir (Crime, mystery)', label: 'Film Noir (Crime, mystery)' },
         { value: 'Vaporwave Aesthetic Video', label: 'Vaporwave Aesthetic Video' },
+        { value: 'Watercolor Painting', label: 'Watercolor Painting' },
+        { value: '8-bit Pixel Art', label: '8-bit Pixel Art' },
+        { value: 'Steampunk', label: 'Steampunk' },
+        { value: 'Vintage Comic Book Style', label: 'Vintage Comic Book Style' },
+        { value: 'Surrealism (Dali-esque)', label: 'Surrealism (Dali-esque)' },
+        { value: 'Gothic Horror (Tim Burton style)', label: 'Gothic Horror (Tim Burton style)' },
+        { value: 'Lo-fi / Chillhop Aesthetic', label: 'Lo-fi / Chillhop Aesthetic' },
+        { value: 'Nature Documentary (BBC Planet Earth style)', label: 'Nature Documentary (BBC Planet Earth style)' },
+        { value: 'Wes Anderson Style (Symmetrical, Quirky)', label: 'Wes Anderson Style (Symmetrical, Quirky)' },
+        { value: 'Psychedelic / Trippy Visuals', label: 'Psychedelic / Trippy Visuals' },
+        { value: 'Hand-drawn Sketch Animation', label: 'Hand-drawn Sketch Animation' },
+        { value: 'Cinematic Drone Footage', label: 'Cinematic Drone Footage' },
     ]
 };
 
@@ -43,7 +71,7 @@ const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState<ActiveTab>('script');
 
     const [topic, setTopic] = useState<string>('');
-    const [wordCount, setWordCount] = useState<string>('');
+    const [wordCount, setWordCount] = useState<string>('500');
     const [language, setLanguage] = useState<'vietnamese' | 'english'>('vietnamese');
     const [script, setScript] = useState<string>('');
     const [veoJson, setVeoJson] = useState<string>('');
